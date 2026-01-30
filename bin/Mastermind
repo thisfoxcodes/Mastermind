@@ -10,15 +10,15 @@ def begin_set(ver)
   return :regular if ver == 1
   return :super if ver == 2
 
-  puts 'Invalid Option Entered!!'.red
+  puts ['Very funny.', 'Nice try.', 'Lol.'].sample.red
   puts 'Please Press 1 for Mastermind, or Press 2 for Super Mastermind'.green
   begin_set(gets.chomp.to_i)
 end
 
 # Main loop for playing the game.
 loop do
-  puts 'Starting Masterminds...'.yellow
-  puts 'Press 1 for Mastermind, or Press 2 for Super Mastermind'.green
+  puts 'Starting Mastermind...'.yellow
+  print 'Press 1 for Mastermind, or Press 2 for Super Mastermind '.green
   game = Mastermind::MastermindGame.new(begin_set(gets.chomp.to_i))
   puts 'Creating Game...'.yellow
   game.start_game
@@ -31,26 +31,27 @@ loop do
   end
 
   while game.turns_remaining.positive?
+    puts '-'.cyan * 83
     print 'What is your guess? '.green
-    puts "(Turns Remaining: #{game.g_turns})".purple
+    print "(Guesses Remaining: ".purple
+    print game.g_turns
+    puts ")".purple
     player_guess = gets.chomp.upcase.chars
     case player_guess.join.downcase
     when 'help' # player needs help mid-game
-      puts '-'.cyan * 83
       print 'Your goal is to crack the code! '.green
       puts "The code is a #{GameParams::LENGTH[game.version]}-color combination of the following:".green
-      puts '`R` for Red'.red
-      puts '`G` for Green'.green
-      puts '`B` for Blue'.blue
-      puts '`Y` for Yellow'.yellow
-      puts '`C` for Cyan'.cyan if game.version == :super
-      puts '`P` for Purple'.purple if game.version == :super
-      puts '`W` for White'.white
-      puts '`K` for Black'.black
-      print 'NOTE: '.red
-      puts 'There can be multiples of the same color.'.green
-      puts "You only have #{GameParams::TURNS[game.version]}".red
-      puts '-'.cyan * 83
+      puts '`R` - Red'.red
+      puts '`G` - Green'.green
+      puts '`B` - Blue'.blue
+      puts '`Y` - Yellow'.yellow
+      puts '`C` - Cyan'.cyan if game.version == :super
+      puts '`P` - Purple'.purple if game.version == :super
+      puts '`W` - White'.white
+      puts '`K` - Black'.black
+      puts 'NOTE: '.red
+      puts ' - There can be multiples of the same color.'.red
+      puts " - You have #{GameParams::TURNS[game.version]} guesses before you lose.".red
 
     when 'q', 'quit', 'exit' # player wants to quit mid-game
       puts 'Terminating Game...'.red
@@ -59,14 +60,14 @@ loop do
     else # player attempted an input. Compare against master code, return result
       attempt = game.take_turn(player_guess)
       if !attempt
-        puts 'Invalid Guess. Please take a look at your input, and ensure it is valid.'.red
-        print 'If you are unsure, please try command '.red
+        print 'Invalid Guess. If you are unsure, please try command '.red
         puts 'help'.cyan
       elsif attempt == :winner
         break
       else
-        print "Correct: #{attempt[0]} ".cyan
-        puts "| Correct Color, Wrong Spot: #{attempt[1]}".cyan
+        attempt[0].times { print "⬤ ".green }
+        attempt[1].times { print "⬤ ".yellow }
+        puts ''
       end
     end
     game.lost if game.turns_remaining.zero?
