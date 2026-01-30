@@ -38,20 +38,19 @@ module Mastermind
       if validate(player_guess)
         @turns_remaining -= 1
         ans = @code_maker.compare_guess(player_guess)
-        if ans == true
-          won
-        else
-          [ans[0].to_s.green,
-           ans[1].to_s.yellow]
-        end
+        ans == true ? won : [ans[0], ans[1]]
       else
         false # invalid input, cannot take a turn
       end
     end
 
     def won
-      print 'Congrats! You have cracked the code with '.green
-      print @turns_remaining.to_s.blue
+      4.times { print "⬤ ".green }
+      puts ''
+      print "Congrats! You have cracked the code ".green
+      print @code_maker.answer.join.yellow
+      print " with ".green
+      print @turns_remaining.to_s.yellow
       puts ' turns left!'.green
       @state = :winner
     end
@@ -60,7 +59,7 @@ module Mastermind
       puts 'GAME OVER!'.red
       puts 'You have ran out of turns!'.red
       print "The Mastermind's code was: ".red
-      puts color_print(@code_maker.answer)
+      puts @code_maker.answer.join.yellow
       @state = :loser
     end
 
