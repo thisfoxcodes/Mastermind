@@ -1,138 +1,77 @@
 # frozen_string_literal: true
 
-require_relative '../../../lib/mastermind/game'
-require_relative '../../../helper/string_color_helper'
 require_relative '../../helper/spec_helper'
 
 module Mastermind
   include GameParams
-  # Base kit of MastermindGame Class
-  RSpec.describe MastermindGame do
+
+  RSpec.describe Game do
     before do
-      $stdout.stub(:write)
-      @game = Mastermind::MastermindGame.new
+      # $stdout.stub(:write)
+      @game = Mastermind::Game.new
     end
 
     it 'initializes game' do
-      expect(@game.turns_remaining).to eq(nil)
-      expect(@game.code_maker).to eq(nil)
-      expect(@game.state).to eq(nil)
-    end
-
-    it 'version is option during initialization' do
-      my_set = Mastermind::Owner.new(:regular)
-
+      expect(@game.state).to eq(:new)
+      expect(@game.turns_remaining).to eq(10)
       expect(@game.version).to eq(:regular)
-      expect(my_set.version).to eq(:regular)
+      expect(@game.games_played).to eq(0)
     end
 
-    it 'defaults invalid version option to :regular' do
-      my_set_wrong = Mastermind::Owner.new(:test)
+    it 'fails to start game due to test version' do
+      invalid_game = Mastermind::Game.new(:test)
 
-      expect(my_set_wrong.version).to eq(:regular)
-    end
-
-    it 'has a default of 10 turns' do
-      expect(TURNS[@game.version]).to eq(10)
-    end
-
-    it 'can read/write @turns_remaining and @state' do
-      expect(@game.turns_remaining).to eq(nil)
-      @game.turns_remaining = 7
-      expect(@game.turns_remaining).to eq(7)
-
-      expect(@game.state).to eq(nil)
-      @game.state = :test_state
-      expect(@game.state).to eq(:test_state)
-    end
-
-    it 'only read @game_counter, @code_maker, @version' do
-      expect(@game.game_counter).to eq(0)
-      expect(@game.code_maker).to eq(nil)
-      expect(@game.version).to eq(:regular)
-
-      expect do
-        @game.game_counter = 3
-      end.to raise_error(NoMethodError)
-
-      expect do
-        @game.code_maker = Mastermind::Owner.new
-      end.to raise_error(NoMethodError)
-
-      expect do
-        @game.version = :test
-      end.to raise_error(NoMethodError)
+      # expect(invalid_game.version).to eq(:test)
+      error = Mastermind::Game::GameError
+      expect { invalid_game.start }.to raise_error(error) do |e|
+        e.message == 'invalid_version'
+      end
     end
   end
 
-  # Tests After MastermindGame Begins
-  RSpec.describe 'Start MastermindGame' do
+  # Tests After Game Begins
+  RSpec.describe 'Start Game' do
     before do
-      $stdout.stub(:write)
-      @game = Mastermind::MastermindGame.new
-      @game.start_game
+      # $stdout.stub(:write)
+      @game = Mastermind::Game.new
+      @game.start
     end
 
     it 'starts a game' do
-      expect(@game.turns_remaining).to eq(10)
       expect(@game.state).to eq(:in_progress)
-      expect(@game.code_maker.class).to eq(Mastermind::Owner)
+      expect(@game.instance_variable_get(:@code_maker).class).to eq(Mastermind::CodeMaker)
     end
 
-    it 'when starting game, generates @code_maker with matching version' do
-      expect(@game.code_maker.version).to eq(@game.version)
-    end
-
-    it 'can get current number of turns' do
-      a = @game.g_turns
-
-      expect(a.class).to eq(String)
-      expect(a.inspect).to include('10')
+    it 'generates @code_maker with matching version, when starting game' do
+      expect(@game.instance_variable_get(:@code_maker).version).to eq(@game.version)
     end
 
     it 'can take a successful turn' do
-      turn = @game.take_turn(%w[W K G W])
-
+      @game.guess(%w[W K G W])
       expect(@game.turns_remaining).to eq(9)
-      expect(turn[0]).to include('')
-      expect(turn[1]).to include('')
     end
 
     it 'can take a winning turn' do
-      code = @game.code_maker
-      winning_turn = @game.take_turn(code.answer)
-      expect(@game.turns_remaining).to eq(9)
-      expect(winning_turn).to eq(:winner)
+      secret_code = @game.instance_variable_get(:@code_maker).answer
+      expected_result = {
+        turns_remaining: 9,
+        state: :won,
+        secret_code: secret_code
+      }
+
+      expect(expected_result).to eq(@game.guess(secret_code))
     end
 
     it 'can check for invalid input when taking a turn' do
       input1 = 'eeee'.upcase.chars
       input2 = 'kasdinfosbunaodimsf123r029jf!@#'.upcase.chars
       input3 = []
-      input4 = @game.take_turn(%w[W C G W])
+      input4 = 1
 
-      expect(@game.take_turn(input1)).to eq(false)
-      expect(@game.take_turn(input2)).to eq(false)
-      expect(@game.take_turn(input3)).to eq(false)
-      expect(input4).to eq(false)
-      expect(@game.turns_remaining).to eq(10)
-    end
-
-    it 'game won' do
-      @game.won
-      expect(@game.state).to eq(:winner)
-    end
-
-    it 'game lost' do
-      @game.lost
-      expect(@game.state).to eq(:loser)
-    end
-
-    it 'can keep count of multiple games in session' do
-      @game.add_game
-      expect(@game.game_counter).to eq(1)
-      @game.add_game
-      expect(@game.game_counter).to eq(2)
+      expect { @game.guess(input1) }.to raise_error(CodeMaker::GuessError)
+      expect { @game.guess(input2) }.to raise_error(CodeMaker::GuessError)
+      expect { @game.guess(input3) }.to raise_error(CodeMaker::GuessError)
+      expect { @game.guess(input4) }.to raise_error(CodeMaker::GuessError)
     end
   end
 end

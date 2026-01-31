@@ -1,87 +1,94 @@
 # frozen_string_literal: true
 
-require_relative 'mastermind_owner'
-require_relative '../../helper/color_print_helper'
+require_relative 'code_maker'
 
-# handles game initialization + processes for playing game
 module Mastermind
-  # The Game class. This handles game mechanics
-  class MastermindGame
-    include ColorHelper
+  # Game manages the state and flow of a Mastermind game.
+  # It coordinates between the player and the CodeMaker.
+  class Game
+    class GameError < StandardError; end
+
     include GameParams
 
-    attr_reader :game_counter,
-                :code_maker,
-                :version
-    attr_accessor :turns_remaining,
-                  :state
+    attr_reader :turns_remaining, :state, :version, :games_played
 
     def initialize(version = :regular)
-      @turns_remaining = nil
       @code_maker = nil
-      @state = nil
-      @game_counter = 0
-      @version = version_grab(version)
+      @games_played = 0
+      @state = :new # Possible States: :new, :in_progress, :won, :lost
+      @version = version
+      @turns_remaining = TURNS[@version]
     end
 
-    def start_game
-      @turns_remaining ||= TURNS[version]
+    def start
+      raise GameError, :invalid_version unless VERSIONS.include?(version)
+
+      @code_maker = CodeMaker.new(@version)
       @state = :in_progress
-      @code_maker = Mastermind::Owner.new(version)
+      self
     end
 
-    def g_turns
-      @turns_remaining.to_s.red
-    end
+    # Returns a hash with:
+    #   - won: boolean
+    #   - turns_remaining: integer
+    #   - state: symbol (:in_progress, :won, :lost)
+    #   - correct: integer (if didn't win)
+    #   - misplaced: integer (if didn't win)
+    #   - secret_code: array (if won)
+    def guess(player_guess)
+      result = @code_maker.compare_guess(player_guess)
 
-    def take_turn(player_guess)
-      if validate(player_guess)
-        @turns_remaining -= 1
-        ans = @code_maker.compare_guess(player_guess)
-        ans == true ? won : [ans[0], ans[1]]
-      else
-        false # invalid input, cannot take a turn
-      end
-    end
+      @turns_remaining -= 1
 
-    def won
-      4.times { print "⬤ ".green }
-      puts ''
-      print "Congrats! You have cracked the code ".green
-      print @code_maker.answer.join.yellow
-      print " with ".green
-      print @turns_remaining.to_s.yellow
-      puts ' turns left!'.green
-      @state = :winner
-    end
-
-    def lost
-      puts 'GAME OVER!'.red
-      puts 'You have ran out of turns!'.red
-      print "The Mastermind's code was: ".red
-      puts @code_maker.answer.join.yellow
-      @state = :loser
-    end
-
-    def add_game
-      @game_counter += 1
-    end
-
-    private
-
-    def version_grab(version)
-      VERSIONS.include?(version) ? version : :regular
-    end
-
-    def validate(guess)
-      result = true
-      result &= guess.instance_of?(Array)
-      result &= guess.length == LENGTH[version]
-      guess.each do |i|
-        result &= (VALID_OPTIONS[version]).include?(i)
+      if result == true
+        @state = :won
+        return {
+          turns_remaining: @turns_remaining,
+          state: @state,
+          secret_code: @code_maker.answer
+        }
       end
 
-      result
+      @state = :lost if @turns_remaining.zero?
+
+      {
+        won: false,
+        turns_remaining: @turns_remaining,
+        state: @state,
+        correct: result[:correct],
+        misplaced: result[:misplaced]
+      }
+    end
+
+    def secret_code
+      return nil if @state == :in_progress || @state == :new
+
+      @code_maker.answer
+    end
+
+    def in_progress?
+      @state == :in_progress
+    end
+
+    def game_over?
+      @state == :won || @state == :lost
+    end
+
+    def new_round
+      @games_played += 1
+      start
+    end
+
+    def code_length
+      LENGTH[@version]
+    end
+
+    def valid_colors
+      VALID_OPTIONS[@version]
+    end
+
+    def max_turns
+      TURNS[@version]
     end
   end
 end

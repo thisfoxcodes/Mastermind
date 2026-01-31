@@ -11,13 +11,10 @@ Gem::Specification.new do |s|
   s.files       = Dir['{bin,lib,spec,helper}/**/*'] + %w[
     LICENSE README.md
   ]
-  s.test_files  = Dir['spec/**/*']
   s.bindir      = 'bin'
   s.executables = ['Mastermind']
   s.homepage    = 'https://www.thisfoxcodes.com'
   s.metadata    = { 'source_code_uri' => 'https://github.com/dmspelma/mastermind',
                     'rubygems_mfa_required' => 'true' }
   s.required_ruby_version = '>=3.0'
-  s.add_development_dependency 'rspec',
-                               '~>2.8', '>=2.8.0'
 end

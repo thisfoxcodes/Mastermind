@@ -13,7 +13,7 @@ Metrics/MethodLength:
 Metrics/ModuleLength:
   Max: 150
 Metrics/BlockLength:
-  IgnoredMethods: ['guard', 'loop', 'describe']
+  AllowedMethods: ['guard', 'loop', 'describe']
   Max: 40
 Layout/LineLength:
   Max: 100
