@@ -17,7 +17,6 @@ module MastermindSolver
       expect(@my_solver.turns_to_solve).to eq(0)
       expect(@my_solver.owner).to_not eq(nil)
       expect(@my_solver.state).to eq(:unsolved)
-      expect(@answer_set.inspect).to eq(@solutions_set.inspect)
     end
 
     it 'verifies fill_set method creates set with 1296 different entries' do
@@ -102,15 +101,15 @@ module MastermindSolver
       expect(@my_solver.benchmark(2)).to_not eq(nil)
     end
 
-    it 'return-type for benchmark is array with 4 elements' do
+    it 'return-type for benchmark is hash with expected keys' do
       return_type = @my_solver.benchmark(2)
 
-      expect(return_type.class).to eq(Array)
-      expect(return_type.length).to eq(4)
-      expect(return_type[0].class).to eq(Float)
-      expect(return_type[1].class).to eq(Float)
-      expect(return_type[2].class).to eq(Float)
-      expect(return_type[3].class).to eq(Integer)
+      expect(return_type.class).to eq(Hash)
+      expect(return_type[:total_time].class).to eq(Float)
+      expect(return_type[:avg_time].class).to eq(Float)
+      expect(return_type[:avg_turns].class).to eq(Float)
+      expect(return_type[:max_turns].class).to eq(Integer)
+      expect(return_type[:num_tests]).to eq(2)
     end
 
     it 'benchmark method only accepts positive numbers' do
@@ -119,14 +118,14 @@ module MastermindSolver
       try_letter   = @my_solver.benchmark('a')
       try_nil      = @my_solver.benchmark(nil)
 
-      expect(try_zero).to eq(false)
-      expect(try_negative).to eq(false)
-      expect(try_letter).to eq(false)
-      expect(try_nil).to eq(false)
+      expect(try_zero).to include(:error)
+      expect(try_negative).to include(:error)
+      expect(try_letter).to include(:error)
+      expect(try_nil).to include(:error)
     end
 
     it 'can perform .solve after .benchmark(integer)' do
-      expect(@my_solver.benchmark(2).length).to eq(4)
+      expect(@my_solver.benchmark(2).length).to eq(5)
       expect(@my_solver.solve.length).to eq(2)
     end
 

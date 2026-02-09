@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative '../../lib/mastermind'
+
 # For editing RSpec config for tests
 RSpec.configure do |config|
   config.mock_with :rspec do |mocks|

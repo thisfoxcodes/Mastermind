@@ -2,89 +2,143 @@
 
 # frozen_string_literal: true
 
-require_relative '../lib/mastermind/game'
+require_relative '../lib/mastermind'
 require_relative '../helper/string_color_helper'
-require_relative '../helper/game_settings_helper'
 
-def begin_set(ver)
-  return :regular if ver == 1
-  return :super if ver == 2
+# CLI interface for Mastermind game
+module MastermindCLI
+  module_function
 
-  puts ['Very funny.', 'Nice try.', 'Lol.'].sample.red
-  puts 'Please Press 1 for Mastermind, or Press 2 for Super Mastermind'.green
-  begin_set(gets.chomp.to_i)
-end
+  def select_version
+    print 'Press 1 for Mastermind, or Press 2 for Super Mastermind '.green
+    choice = gets&.chomp.to_i
 
-# Main loop for playing the game.
-loop do
-  puts 'Starting Mastermind...'.yellow
-  print 'Press 1 for Mastermind, or Press 2 for Super Mastermind '.green
-  game = Mastermind::MastermindGame.new(begin_set(gets.chomp.to_i))
-  puts 'Creating Game...'.yellow
-  game.start_game
-
-  # only display help on game start
-  if game.game_counter < 1
-    print 'Type '.blue
-    print 'help'.cyan
-    puts ' if you require instructions.'.blue
-  end
-
-  while game.turns_remaining.positive?
-    puts '-'.cyan * 83
-    print 'What is your guess? '.green
-    print "(Guesses Remaining: ".purple
-    print game.g_turns
-    puts ")".purple
-    player_guess = gets.chomp.upcase.chars
-    case player_guess.join.downcase
-    when 'help' # player needs help mid-game
-      print 'Your goal is to crack the code! '.green
-      puts "The code is a #{GameParams::LENGTH[game.version]}-color combination of the following:".green
-      puts '`R` - Red'.red
-      puts '`G` - Green'.green
-      puts '`B` - Blue'.blue
-      puts '`Y` - Yellow'.yellow
-      puts '`C` - Cyan'.cyan if game.version == :super
-      puts '`P` - Purple'.purple if game.version == :super
-      puts '`W` - White'.white
-      puts '`K` - Black'.black
-      puts 'NOTE: '.red
-      puts ' - There can be multiples of the same color.'.red
-      puts " - You have #{GameParams::TURNS[game.version]} guesses before you lose.".red
-
-    when 'q', 'quit', 'exit' # player wants to quit mid-game
-      puts 'Terminating Game...'.red
-      break
-
-    else # player attempted an input. Compare against master code, return result
-      attempt = game.take_turn(player_guess)
-      if !attempt
-        print 'Invalid Guess. If you are unsure, please try command '.red
-        puts 'help'.cyan
-      elsif attempt == :winner
-        break
-      else
-        attempt[0].times { print "⬤ ".green }
-        attempt[1].times { print "⬤ ".yellow }
-        puts ''
-      end
+    case choice
+    when 1 then :regular
+    when 2 then :super
+    else
+      puts ['Very funny.', 'Nice try.', 'Lol.'].sample.red
+      puts 'Please Press 1 for Mastermind, or Press 2 for Super Mastermind'.green
+      select_version
     end
-    game.lost if game.turns_remaining.zero?
   end
 
-  break if GameParams::QUIT_CONTENTS.include?(player_guess.join.downcase)
-
-  print 'Would you like to play again?'.green
-  puts ' (Press Q to quit)'.yellow
-  case gets.chomp.downcase
-  when 'q', 'quit', 'exit', 'n', 'no'
-    puts 'Thank you for playing. Goodbye.'.green
-    break
-  else
-    puts '-'.cyan * 83
-    puts 'Loading another round...'.yellow
+  def display_help(game)
+    print 'Your goal is to crack the code! '.green
+    puts "The code is a #{game.code_length}-color combination of the following:".green
+    puts '`R` - Red'.red
+    puts '`G` - Green'.green
+    puts '`B` - Blue'.blue
+    puts '`Y` - Yellow'.yellow
+    if game.version == :super
+      puts '`C` - Cyan'.cyan
+      puts '`P` - Purple'.purple
+    end
+    puts '`W` - White'.white
+    puts '`K` - Black'.black
+    puts 'NOTE: '.red
+    puts ' - There can be multiples of the same color.'.red
+    puts " - You have #{game.max_turns} guesses before you lose.".red
   end
 
-  game.add_game
+  def display_result(result)
+    count = result[:correct] + result[:misplaced]
+    result[:correct].times { print '⬤ '.green }
+    result[:misplaced].times { print '⬤ '.yellow }
+    puts ''
+  end
+
+  def display_win(result)
+    result[:secret_code].length.times { print '⬤ '.green }
+    puts ''
+    print 'Congrats! You have cracked the code '.green
+    print result[:secret_code].join.yellow
+    print ' with '.green
+    print result[:turns_remaining].to_s.yellow
+    puts ' turns left!'.green
+  end
+
+  def display_loss(game)
+    puts 'GAME OVER!'.red
+    puts 'You have ran out of turns!'.red
+    print "The Mastermind's code was: ".red
+    puts game.secret_code.join.yellow
+  end
+
+  def display_invalid_guess
+    print 'Invalid Guess. If you are unsure, please try command '.red
+    puts 'help'.cyan
+  end
+
+  def play_again?
+    print 'Would you like to play again?'.green
+    puts ' (Press Q to quit)'.yellow
+    input = gets&.chomp&.downcase
+    !%w[q quit exit n no].include?(input)
+  end
+
+  def run
+    first_game = true
+
+    loop do
+      puts 'Starting Mastermind...'.yellow
+      version = select_version
+      puts 'Creating Game...'.yellow
+
+      game = Mastermind::Game.new(version)
+      game.start
+
+      if first_game
+        print 'Type '.blue
+        print 'help'.cyan
+        puts ' if you require instructions.'.blue
+        first_game = false
+      end
+
+      quit_requested = false
+
+      while game.in_progress?
+        puts '-'.cyan * 83
+        print 'What is your guess? '.green
+        print '(Guesses Remaining: '.purple
+        print game.turns_remaining.to_s.red
+        puts ')'.purple
+
+        input = gets&.chomp&.upcase || ''
+        player_guess = input.chars
+
+        case input.downcase
+        when 'h', 'help'
+          display_help(game)
+        when 'q', 'quit', 'exit'
+          puts 'Terminating Game...'.red
+          quit_requested = true
+          break
+        else
+          begin
+            result = game.guess(player_guess)
+
+            if result[:state] == :won
+              display_win(result)
+            else
+              display_result(result)
+              display_loss(game) if game.state == :lost
+            end
+          rescue StandardError
+            display_invalid_guess
+          end
+        end
+      end
+
+      break if quit_requested
+      break unless play_again?
+
+      puts '-'.cyan * 83
+      puts 'Loading another round...'.yellow
+    end
+
+    puts 'Thank you for playing.'.green
+  end
 end
+
+MastermindCLI.run
