@@ -4,10 +4,21 @@
 
 require_relative '../lib/mastermind'
 require_relative '../helper/string_color_helper'
+require 'io/console'
 
 # CLI interface for Mastermind game
 module MastermindCLI
   module_function
+
+  def terminal_width
+    $stdout.winsize[1]
+  rescue Errno::ENOTTY, NoMethodError
+    80
+  end
+
+  def separator
+    '-'.cyan * terminal_width
+  end
 
   def select_version
     print 'Press 1 for Mastermind, or Press 2 for Super Mastermind '.green
@@ -24,7 +35,7 @@ module MastermindCLI
   end
 
   def display_help(game)
-    print 'Your goal is to crack the code! '.green
+    puts 'Your goal is to crack the code!'.green
     puts "The code is a #{game.code_length}-color combination of the following:".green
     puts '`R` - Red'.red
     puts '`G` - Green'.green
@@ -42,10 +53,13 @@ module MastermindCLI
   end
 
   def display_result(result)
-    count = result[:correct] + result[:misplaced]
-    result[:correct].times { print '⬤ '.green }
-    result[:misplaced].times { print '⬤ '.yellow }
-    puts ''
+    if result[:correct].zero? && result[:misplaced].zero?
+      puts '❌'
+    else
+      result[:correct].times { print '⬤ '.green }
+      result[:misplaced].times { print '⬤ '.yellow }
+      puts ''
+    end
   end
 
   def display_win(result)
@@ -98,7 +112,7 @@ module MastermindCLI
       quit_requested = false
 
       while game.in_progress?
-        puts '-'.cyan * 83
+        puts separator
         print 'What is your guess? '.green
         print '(Guesses Remaining: '.purple
         print game.turns_remaining.to_s.red
@@ -133,7 +147,7 @@ module MastermindCLI
       break if quit_requested
       break unless play_again?
 
-      puts '-'.cyan * 83
+      puts separator
       puts 'Loading another round...'.yellow
     end
 
