@@ -63,7 +63,7 @@ module MastermindSolver
         result = @code_maker.compare_guess(guess)
         @turns_to_solve += 1
 
-        if result[:won]
+        if result == true
           @correct_answer = guess
           break
         end
@@ -177,8 +177,12 @@ module MastermindSolver
     def prune_set(set, guess, response)
       set.delete(guess)
       set.each do |guess_set|
-        result = Mastermind::CodeMaker.compare(guess, guess_set)
-        set.delete(guess_set) unless [result[:correct], result[:misplaced]] == response
+        result = Mastermind::CodeMaker.compare(guess, guess_set, @version)
+        if result == true
+          set.delete(guess_set) unless [guess.length, 0] == response
+        else
+          set.delete(guess_set) unless [result[:correct], result[:misplaced]] == response
+        end
       end
     end
 
@@ -191,8 +195,12 @@ module MastermindSolver
       min = max = 0
       @solutions_set.each do |full_answer|
         @solutions_set.each do |possible_answer|
-          result = Mastermind::CodeMaker.compare(full_answer, possible_answer)
-          correct_possible = [result[:correct], result[:misplaced]]
+          result = Mastermind::CodeMaker.compare(full_answer, possible_answer, @version)
+          correct_possible = if result == true
+                               [full_answer.length, 0]
+                             else
+                               [result[:correct], result[:misplaced]]
+                             end
           map[correct_possible] += 1
         end
         max = map.values.max

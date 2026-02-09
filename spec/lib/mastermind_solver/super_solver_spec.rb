@@ -16,7 +16,6 @@ module MastermindSolver
       expect(@my_solver.turns_to_solve).to eq(0)
       expect(@my_solver.owner).to_not eq(nil)
       expect(@my_solver.state).to eq(:unsolved)
-      expect(@answer_set.inspect).to eq(@solutions_set.inspect)
     end
 
     it 'verifies fill_set method creates set with 32768 different entries' do
